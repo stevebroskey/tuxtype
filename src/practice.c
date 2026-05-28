@@ -334,7 +334,7 @@ int Phrases(wchar_t* pphrase )
         SDL_BlitSurface(hands, NULL, screen, &hand_loc);
         SDL_BlitSurface(keyboard, NULL, screen, &keyboard_loc);
         /* Update entire screen */
-        SDL_UpdateRect(screen, 0, 0, 0, 0);
+        SDL_UpdateWindowSurface(window); /* SDL2 */
  
         state = 3;
         break;
@@ -385,12 +385,12 @@ int Phrases(wchar_t* pphrase )
 		
       if (event.type == SDL_KEYDOWN)
       {
-        key = GetIndex((wchar_t)event.key.keysym.unicode);
+        key = GetIndex((wchar_t)event.key.keysym.sym /* SDL2: .unicode removed */);
         shift_pressed = event.key.keysym.mod&KMOD_SHIFT;
         tmp = -1;
 
         /* TODO I must be missing something - why aren't we just looking at */
-        /* the event.key.keysym.unicode value instead of going through this */
+        /* the event.key.keysym.sym value instead of going through this (SDL2: .unicode removed) */
         /* giant switch statement?                                          */
 
         switch(event.key.keysym.sym)
@@ -730,7 +730,7 @@ int Phrases(wchar_t* pphrase )
 
         /****************************************************/
         /*  ---------- If user typed correct character, handle it: --------------- */
-        if (phrases[cur_phrase][cursor] == event.key.keysym.unicode || (settings.braille && phrases[cur_phrase][cursor] == tmp))
+        if (phrases[cur_phrase][cursor] == event.key.keysym.sym /* SDL2: .unicode removed */ || (settings.braille && phrases[cur_phrase][cursor] == tmp))
         {
           cursor++;
           correct_chars++;
@@ -856,7 +856,7 @@ int Phrases(wchar_t* pphrase )
             tmpsurf = NULL;
           }
 
-          SDL_Flip(screen);
+          SDL_UpdateWindowSurface(window); /* SDL2 */
 
           /* If player has completed phrase, celebrate! */
           if (cursor == wcslen(phrases[cur_phrase]))
@@ -886,7 +886,7 @@ int Phrases(wchar_t* pphrase )
                 SDL_BlitSurface(CurrentBkgd(), &tux_loc, screen, &tux_loc);
                 if (tux_win && tux_win->frame[tux_win->cur])
                   SDL_BlitSurface(tux_win->frame[tux_win->cur], NULL, screen, &tux_loc);
-                SDL_UpdateRect(screen, tux_loc.x, tux_loc.y, tux_loc.w, tux_loc.h);
+                SDL_UpdateWindowSurface(window); /* SDL2 */
                 NEXT_FRAME(tux_win);
                 SDL_Delay(200);
               }
@@ -910,7 +910,7 @@ int Phrases(wchar_t* pphrase )
         /* -------- handle incorrect key press: -------------*/
         else  if (check_key)
         {
-          // int key = GetIndex((wchar_t)event.key.keysym.unicode);
+          // int key = GetIndex((wchar_t)event.key.keysym.sym /* SDL2: .unicode removed */);
           if ( key != -1 ) 
           {
             keypress1= GetWrongKeypress(key);
@@ -1008,8 +1008,8 @@ int Phrases(wchar_t* pphrase )
       NEXT_FRAME(tux_stand);
     }
 
-    SDL_UpdateRect(screen, 0, 0, 0, 0);
-//    SDL_Flip(screen);
+    SDL_UpdateWindowSurface(window); /* SDL2 */
+//    SDL_UpdateWindowSurface(window); /* SDL2 */
     SDL_Delay(30); /* FIXME should keep frame rate constant */
 
   }while (!quit);  /* ------- End of main event loop ------------- */

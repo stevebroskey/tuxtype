@@ -98,7 +98,7 @@ SDL_Rect bkg_rect,
 /* This syntax is full of fluffy kittens! (note: kittens sold separately) */
 SDL_Surface* current_bkg()
 { 
-    if (T4K_GetScreen()->flags & SDL_FULLSCREEN)
+    if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP)
         return fs_bkg;
     return win_bkg; 
 }
@@ -108,7 +108,7 @@ SDL_Surface* current_bkg()
 /* the "other" one.                                              */
 void set_current_bkg(SDL_Surface* new_bkg)
 {
-    if(screen->flags & SDL_FULLSCREEN)
+    if(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP)
     {
         if(fs_bkg != NULL)
             SDL_FreeSurface(fs_bkg);
@@ -192,7 +192,7 @@ void TitleScreen(void)
         SDL_FreeSurface(logo);
     }
 
-    SDL_UpdateRect(screen, 0, 0, 0, 0);
+    SDL_UpdateWindowSurface(window); /* SDL2 */
 
     /* Play "harp" greeting sound lifted from Tux Paint */
     playsound(SND_HARP);
@@ -290,10 +290,8 @@ void TitleScreen(void)
             SDL_BlitSurface(Tux->frame[0], NULL, screen, &tux_anim);
             SDL_BlitSurface(title, NULL, screen, &title_anim);
 
-            SDL_UpdateRect(screen, tux_anim.x, tux_anim.y, tux_anim.w,
-                    min(tux_anim.h + tux_pix_skip, screen->h - tux_anim.y));
-            SDL_UpdateRect(screen, title_anim.x, title_anim.y,
-                    min(title_anim.w + title_pix_skip, screen->w - title_anim.x), title_anim.h);
+            SDL_UpdateWindowSurface(window); /* SDL2 */
+            SDL_UpdateWindowSurface(window); /* SDL2 */
 
             T4K_Throttle(1000/ANIM_FPS, &timer);
         }
@@ -328,7 +326,7 @@ void DrawTitleScreen(void)
     SDL_BlitSurface(current_bkg(), NULL, screen, &bkg_rect);
     SDL_BlitSurface(Tux->frame[0], NULL, screen, &tux_rect);
     SDL_BlitSurface(title, NULL, screen, &title_rect);
-    //SDL_UpdateRect(screen, 0, 0, 0, 0);
+    //SDL_UpdateWindowSurface(window); /* SDL2 */
 }
 
 /* Render and position all titlescreen items to match current
@@ -559,7 +557,7 @@ void ShowMessageWrap( int font_size, const char* str )
     int maxline;
     Uint32 timer = 0;
 
-    if(screen->flags & SDL_FULLSCREEN)
+    if(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP)
         nline = T4K_LineWrap( str, strings, 70, MAX_LINES, MAX_LINEWIDTH );
     else
         nline = T4K_LineWrap( str, strings, 35, MAX_LINES, MAX_LINEWIDTH );
@@ -651,7 +649,7 @@ void ShowMessageWrap( int font_size, const char* str )
             }
         }
 
-        SDL_UpdateRect( screen, 0, 0, 0, 0 );
+        SDL_UpdateWindowSurface(window); /* SDL2 */
 
         while(!finished)
         {
@@ -802,7 +800,7 @@ void ShowMessage(int font_size, const char* str1, const char* str2,
     }
 
     /* and update: */
-    SDL_UpdateRect(screen, 0, 0, 0, 0);
+    SDL_UpdateWindowSurface(window); /* SDL2 */
 
     while (!finished)
     {
@@ -919,7 +917,7 @@ void trans_wipe(SDL_Surface* newbkg, int type, int var1, int var2)
                                        src.w= screen->w;
                                        src.h= screen->h;
                                        SDL_BlitSurface(newbkg,NULL, screen,&src);
-                                       SDL_Flip(screen);
+                                       SDL_UpdateWindowSurface(window); /* SDL2 */
 
                                        break;
                                    }
@@ -959,7 +957,7 @@ void trans_wipe(SDL_Surface* newbkg, int type, int var1, int var2)
                                        src.w =screen->w;
                                        src.h =screen->h;
                                        SDL_BlitSurface(newbkg, NULL,screen, &src);
-                                       SDL_Flip(screen);
+                                       SDL_UpdateWindowSurface(window); /* SDL2 */
 
                                        break;
                                    }
@@ -1015,7 +1013,7 @@ void trans_wipe(SDL_Surface* newbkg, int type, int var1, int var2)
                                      src.w =screen->w;
                                      src.h =screen->h;
                                      SDL_BlitSurface(newbkg, NULL,screen, &src);
-                                     SDL_Flip(screen);
+                                     SDL_UpdateWindowSurface(window); /* SDL2 */
 
                                      break;
                                  }
@@ -1059,7 +1057,7 @@ void update_screen(int *frame) {
     //        if (SNOW_on)
     //                SDL_UpdateRects(screen, SNOW_add( (SDL_Rect*)&dstupdate, numupdates ), SNOW_rects);
     //        else
-    SDL_UpdateRects(screen, numupdates, dstupdate);
+    SDL_UpdateWindowSurfaceRects(window, dstupdate, numupdates); /* SDL2 */
 
     numupdates = 0;
     *frame = *frame + 1;
@@ -1117,8 +1115,8 @@ int handle_easter_egg(const SDL_Event* evt)
             SDL_ShowCursor(SDL_ENABLE);
             //SDL_FillRect(screen, &cursor, 0);
             SDL_BlitSurface(current_bkg(), NULL, screen, &bkg_rect); //cover egg up once more
-            SDL_WarpMouse(cursor.x, cursor.y);
-            SDL_UpdateRect(screen, cursor.x, cursor.y, cursor.w, cursor.h); //egg->x, egg->y, egg->w, egg->h);
+            SDL_WarpMouseInWindow(window, cursor.x,  cursor.y); /* SDL2 */
+            SDL_UpdateWindowSurface(window); /* SDL2 */ //egg->x, egg->y, egg->w, egg->h);
             egg_active = 0;
         }
         return 1;
@@ -1136,13 +1134,13 @@ int handle_easter_egg(const SDL_Event* evt)
             {
                 SDL_BlitSurface(current_bkg(), &tux_rect, screen, &tux_rect);
                 SDL_BlitSurface(Tux->frame[--tuxframe], NULL, screen, &tux_rect);
-                SDL_UpdateRect(screen, tux_rect.x, tux_rect.y, tux_rect.w, tux_rect.h);
+                SDL_UpdateWindowSurface(window); /* SDL2 */
                 SDL_Delay(GOBBLE_ANIM_MS / Tux->num_frames);
             }
 
             eggtimer = SDL_GetTicks() + EASTER_EGG_MS;
             egg_active = 1;
-            SDL_WarpMouse(tux_rect.x + tux_rect.w / 2, tux_rect.y + tux_rect.h - egg->h);
+            SDL_WarpMouseInWindow(window, tux_rect.x + tux_rect.w / 2,  tux_rect.y + tux_rect.h - egg->h); /* SDL2 */
 
         }
 

@@ -318,7 +318,7 @@ void ChooseTheme(void)
       if (start+8<themes) 
         SDL_BlitSurface( right, NULL, screen, &rightRect );
 
-      SDL_UpdateRect(screen, 0, 0, 0 ,0);
+      SDL_UpdateWindowSurface(window); /* SDL2 */
     }
     SDL_Delay(40);
     old_loc = loc;

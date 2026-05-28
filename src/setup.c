@@ -40,93 +40,88 @@ static int load_settings_fp(FILE* fp);
 static int load_settings_filename(const char* fn);
 
 /***************************
-	GraphicsInit: Initializes the graphic system
+        GraphicsInit: Initializes the graphic system
 ****************************/
 void GraphicsInit(void)
 {
-  const SDL_VideoInfo* video_info = SDL_GetVideoInfo();
-  Uint32 surface_mode = 0;
+  SDL_DisplayMode mode;
 
   DEBUGCODE
   { fprintf(stderr, "Entering GraphicsInit()\n"); };
 
-  //Set application's icon:
-  seticon();
-  //Set caption:
-  SDL_WM_SetCaption("Tux Typing", "TuxType");
-
-  if (video_info->hw_available)
+  /* SDL2: query the current display resolution for fullscreen use.      */
+  /* SDL_GetCurrentDisplayMode(0, ...) asks about the primary monitor.   */
+  if (SDL_GetCurrentDisplayMode(0, &mode) == 0)
   {
-    surface_mode = SDL_HWSURFACE;
-    LOG("HW mode\n");
+    fs_res_x = mode.w;
+    fs_res_y = mode.h;
+    DEBUGCODE
+    {
+      fprintf(stderr, "Current display resolution: w %d, h %d.\n",
+              fs_res_x, fs_res_y);
+    }
   }
   else
   {
-    surface_mode = SDL_SWSURFACE;
-    LOG("SW mode\n");
+    /* Fallback if we can't query — use the classic 640×480 window size. */
+    fs_res_x = RES_X;
+    fs_res_y = RES_Y;
+    fprintf(stderr, "Warning: SDL_GetCurrentDisplayMode() failed: %s\n",
+            SDL_GetError());
   }
 
-  // Determine the current resolution: this will be used as the
-  // fullscreen resolution, if the user wants fullscreen.
-  DEBUGCODE
+  /* SDL2: create the OS window.
+   * SDL_WINDOW_FULLSCREEN_DESKTOP means "use the desktop resolution,
+   * scale the content" — avoids the mode-switch flicker of SDL1.       */
   {
-    fprintf(stderr, "Current resolution: w %d, h %d.\n", 
-            video_info->current_w, video_info->current_h);
+    int win_w    = settings.fullscreen ? fs_res_x : RES_X;
+    int win_h    = settings.fullscreen ? fs_res_y : RES_Y;
+    Uint32 flags = settings.fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0;
+
+    window = SDL_CreateWindow("Tux Typing",
+                              SDL_WINDOWPOS_CENTERED,
+                              SDL_WINDOWPOS_CENTERED,
+                              win_w, win_h,
+                              flags);
   }
 
-  /* For fullscreen, we try to use current resolution from OS: */
-  
-  fs_res_x = video_info->current_w;
-  fs_res_y = video_info->current_h;
-
-  if (settings.fullscreen == 1)
+  if (window == NULL)
   {
-    screen = SDL_SetVideoMode(fs_res_x, fs_res_y, BPP, SDL_FULLSCREEN | surface_mode);
-    if (screen == NULL)
-    {
-      fprintf(stderr,
-            "\nWarning: I could not open the display in fullscreen mode.\n"
-            "The Simple DirectMedia error that occured was:\n"
-            "%s\n\n", SDL_GetError());
-      settings.fullscreen = 0;
-    }
+    fprintf(stderr,
+            "\nError: I could not create the game window.\n"
+            "SDL error: %s\n\n", SDL_GetError());
+    exit(2);
   }
 
-  /* Either fullscreen not requested, or couldn't get fullscreen in SDL: */
-  if (settings.fullscreen == 0)
-  {
-    screen = SDL_SetVideoMode(RES_X, RES_Y, BPP, surface_mode);
-  }
+  /* Set the window icon (must be called after SDL_CreateWindow): */
+  seticon();
 
-  /* Failed to get a usable screen - must bail out! */
+  /* SDL2 surface mode: SDL_GetWindowSurface() gives us an SDL_Surface*
+   * just like SDL1's SDL_SetVideoMode() did.  All the existing blit
+   * code (SDL_BlitSurface, SDL_FillRect, etc.) works unchanged.        */
+  screen = SDL_GetWindowSurface(window);
+
   if (screen == NULL)
   {
     fprintf(stderr,
-          "\nError: I could not open the display.\n"
-          "The Simple DirectMedia error that occured was:\n"
-          "%s\n\n", SDL_GetError());
+            "\nError: I could not get the window surface.\n"
+            "SDL error: %s\n\n", SDL_GetError());
     exit(2);
   }
 
   InitBlitQueue();
 
-
-
-  DEBUGCODE 
+  DEBUGCODE
   {
-    video_info = SDL_GetVideoInfo();
-    fprintf(stderr, "-SDL VidMode successfully set to %ix%ix%i\n",
-            video_info->current_w,
-            video_info->current_h,
-            video_info->vfmt->BitsPerPixel);
+    fprintf(stderr, "-Window created: %ix%i\n", screen->w, screen->h);
   }
 
-	LOG( "GraphicsInit():END\n" );
+  LOG("GraphicsInit():END\n");
 }
 
 /****************************
-	LibInit : Init the SDL
-	library
+        LibInit : Init the SDL
+        library
 *****************************/
 /* NOTE lib_flags is *always* SDL_INIT_VIDEO|SDL_INIT_AUDIO - maybe we */
 /* should just simplify all this:                                      */
@@ -200,7 +195,7 @@ void LibInit(Uint32 lib_flags)
       LOG("About to call Mix_OpenAudio():\n");
 //    if (Mix_OpenAudio(22050, AUDIO_S16, 1, 2048) == -1)
       if(Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, 1, 2048) ==
-		      -1)
+                      -1)
       {
         fprintf(stderr, "Warning: Mix_OpenAudio() failed\n - Reasons: %s\n", SDL_GetError());
         settings.sys_sound = 0;
@@ -217,7 +212,7 @@ void LibInit(Uint32 lib_flags)
     fprintf( stderr, "Couldn't initialize desired SDL text library\n" );
     exit(2);
   }
-//	atexit(TTF_Quit);
+//      atexit(TTF_Quit);
 
   LOG( "LibInit():END\n" );
 }
@@ -229,10 +224,10 @@ void LibInit(Uint32 lib_flags)
 void LoadSettings(void)
 {
   char fn[FNLEN];
-// 	char setting[FNLEN];
-// 	char value[FNLEN];
-//	FILE *settingsFile;
-	
+//      char setting[FNLEN];
+//      char value[FNLEN];
+//      FILE *settingsFile;
+        
   /* set the settings directory/file */
 
 #ifdef WIN32
@@ -272,7 +267,7 @@ static int load_settings_filename(const char* fn)
     fprintf(stderr, "load_settings_filename(): no theme-specific settings found: %s\n",fn);
     return -1;
   }
-	
+        
   if (!load_settings_fp(fp))
   {
     fprintf(stderr, "No settings in settings file.\n");
@@ -384,62 +379,62 @@ static int load_settings_fp(FILE* fp)
  */
 void SaveSettings(void)
 {
-	char fn[FNLEN];
-	FILE* settingsFile;
-	
-	/* set the settings directory/file */
+        char fn[FNLEN];
+        FILE* settingsFile;
+        
+        /* set the settings directory/file */
 
-	//#ifdef WIN32
+        //#ifdef WIN32
     //    //MDTTEMP: Commented out the next line and added the next 2 lines after
-	//	//_mkdir( "userdata" );  // just in case try to create save location
-	//	snprintf( fn, FNLEN-1, (const char*)"%s/TuxType", getenv("APPDATA") );
-	//	_mkdir( fn );  // just in case try to create save location
+        //      //_mkdir( "userdata" );  // just in case try to create save location
+        //      snprintf( fn, FNLEN-1, (const char*)"%s/TuxType", getenv("APPDATA") );
+        //      _mkdir( fn );  // just in case try to create save location
     //    // MDTTEMP: Commented out the next line and added the line after
-	//	//snprintf( fn, FNLEN-1, "userdata/settings.txt" );
-	//	snprintf( fn, FNLEN-1, "%s/TuxType/settings.txt", getenv("APPDATA"));
-	//#else
-	//	snprintf( fn, FNLEN-1, (const char*)"%s/.tuxtype", getenv("HOME") );
-	//	mkdir( fn, 0755 ); // just in case try to create save location
-	//	snprintf( fn, FNLEN-1, (const char*)"%s/.tuxtype/settings.txt", getenv("HOME") );
-	//#endif
-	
-	// Use the settings.user_settings_path member
-	snprintf( fn, FNLEN-1, (const char*)"%s/settings.txt", settings.user_settings_path );
+        //      //snprintf( fn, FNLEN-1, "userdata/settings.txt" );
+        //      snprintf( fn, FNLEN-1, "%s/TuxType/settings.txt", getenv("APPDATA"));
+        //#else
+        //      snprintf( fn, FNLEN-1, (const char*)"%s/.tuxtype", getenv("HOME") );
+        //      mkdir( fn, 0755 ); // just in case try to create save location
+        //      snprintf( fn, FNLEN-1, (const char*)"%s/.tuxtype/settings.txt", getenv("HOME") );
+        //#endif
+        
+        // Use the settings.user_settings_path member
+        snprintf( fn, FNLEN-1, (const char*)"%s/settings.txt", settings.user_settings_path );
 
 
-	DEBUGCODE { printf("SaveSettings: settings file is '%s'\n", fn ); }
-	
-	LOG("SaveSettings: trying to open settings file\n");
-	
-	settingsFile = fopen( fn, "w" );
+        DEBUGCODE { printf("SaveSettings: settings file is '%s'\n", fn ); }
+        
+        LOG("SaveSettings: trying to open settings file\n");
+        
+        settingsFile = fopen( fn, "w" );
 
-	if (settingsFile == NULL) {
-		printf("SaveSettings: Settings file cannot be created!\n");
-		return;
-	}
-	
-	/* Save all the settings here! */
+        if (settingsFile == NULL) {
+                printf("SaveSettings: Settings file cannot be created!\n");
+                return;
+        }
+        
+        /* Save all the settings here! */
 //NOTE for now, don't save theme because things get screwed up if the language
 // doesn't match the LANG environmental variable - DSB
 // MDTTEMP: uncommented the following 2 lines
-	if (strncmp(settings.theme_name, "", FNLEN) != 0)
-		fprintf( settingsFile, "lang=%s\n", settings.theme_name );
-	if (settings.o_lives > 9)
-		fprintf( settingsFile, "o_lives=%d\n", settings.o_lives );
+        if (strncmp(settings.theme_name, "", FNLEN) != 0)
+                fprintf( settingsFile, "lang=%s\n", settings.theme_name );
+        if (settings.o_lives > 9)
+                fprintf( settingsFile, "o_lives=%d\n", settings.o_lives );
 
-	fprintf( settingsFile, "mus_volume=%d\n", settings.mus_volume );
-	fprintf( settingsFile, "sfx_volume=%d\n", settings.sfx_volume );
-	fprintf( settingsFile, "menu_music=%d\n", settings.menu_music );
-	fprintf( settingsFile, "fullscreen=%d\n", settings.fullscreen);
-	fprintf( settingsFile, "tts_volume=%d\n", settings.tts_volume);
+        fprintf( settingsFile, "mus_volume=%d\n", settings.mus_volume );
+        fprintf( settingsFile, "sfx_volume=%d\n", settings.sfx_volume );
+        fprintf( settingsFile, "menu_music=%d\n", settings.menu_music );
+        fprintf( settingsFile, "fullscreen=%d\n", settings.fullscreen);
+        fprintf( settingsFile, "tts_volume=%d\n", settings.tts_volume);
 
 
-// 	if (screen->flags & SDL_FULLSCREEN){
-// 		fprintf( settingsFile, "fullscreen=%s\n", "1");
-// 	} else {
-// 		fprintf( settingsFile, "fullscreen=%s\n", "0");
-// 	}
-	fclose(settingsFile);
+//      if (screen->flags & SDL_FULLSCREEN){
+//              fprintf( settingsFile, "fullscreen=%s\n", "1");
+//      } else {
+//              fprintf( settingsFile, "fullscreen=%s\n", "0");
+//      }
+        fclose(settingsFile);
 }
 
 
@@ -618,7 +613,7 @@ DEBUGCODE
     fprintf(stderr, "global_settings_path: '%s'\n\n", settings.global_settings_path);
   }
 
-  return 1;	
+  return 1;     
 }
 
 
@@ -627,7 +622,6 @@ DEBUGCODE
 static void seticon(void)
 {
   SDL_Surface* icon;
-  int colorkey;
 
   /* Load icon into a surface: */
   icon = IMG_Load(DATA_PREFIX "/images/icons/icon.png");
@@ -635,16 +629,14 @@ static void seticon(void)
   {
     fprintf(stderr,
             "\nWarning: I could not load the icon image: %s\n"
-            "The Simple DirectMedia error that occured was:\n"
-            "%s\n\n", DATA_PREFIX "/images/icons/icon.png", SDL_GetError());
+            "SDL error: %s\n\n", DATA_PREFIX "/images/icons/icon.png",
+            SDL_GetError());
     return;
   }
 
-  /* Set up key for transparency: */
-  colorkey = SDL_MapRGB(icon->format, 255, 0, 255);
-  SDL_SetColorKey(icon, SDL_SRCCOLORKEY, colorkey);              
-
-  SDL_WM_SetIcon(icon,NULL);
+  /* SDL2: SDL_SetWindowIcon() replaces SDL_WM_SetIcon().
+   * SDL2 handles the colorkey/alpha internally — no need to set it here. */
+  SDL_SetWindowIcon(window, icon);
 
   SDL_FreeSurface(icon);
 }
@@ -652,8 +644,13 @@ static void seticon(void)
 
 void Cleanup(void)
 {
-  SDL_FreeSurface(screen);
+  /* SDL2: screen is owned by the window — do NOT call SDL_FreeSurface on it. */
   screen = NULL;
   Cleanup_SDL_Text();
+  if (window)
+  {
+    SDL_DestroyWindow(window);
+    window = NULL;
+  }
   SDL_Quit();
 }

@@ -122,7 +122,7 @@ int PlayLaserGame(int diff_level)
 	/* Clear window: */
   
 	SDL_FillRect(screen, NULL, SDL_MapRGB(screen->format, 0, 0, 0));
-	SDL_Flip(screen);
+	SDL_UpdateWindowSurface(window); /* SDL2 */
 
 	/* --- MAIN GAME LOOP: --- */
 
@@ -236,8 +236,8 @@ int PlayLaserGame(int diff_level)
 				if (level_start_wait > 0) 
 					key = SDLK_UNKNOWN;
 				
-				key_unicode = event.key.keysym.unicode;
-				//key_unicode = event.key.keysym.unicode & 0xff;
+				key_unicode = event.key.keysym.sym; /* SDL2: .unicode removed; .sym matches ASCII */
+				//key_unicode = event.key.keysym.sym & 0xff;
 
 				DEBUGCODE
 				{
@@ -745,7 +745,7 @@ int PlayLaserGame(int diff_level)
       
 		/* Swap buffers: */
       
-		SDL_Flip(screen);
+		SDL_UpdateWindowSurface(window); /* SDL2 */
 
 
 		/* If we're in "PAUSE" mode, pause! */

@@ -62,7 +62,9 @@ void DrawButton(SDL_Rect* target_rect,
 {
   /* NOTE - we use a 32-bit temp surface even if we have a 16-bit */
   /* screen - it gets converted during blitting.                  */
-  SDL_Surface* tmp_surf = SDL_CreateRGBSurface(SDL_SWSURFACE|SDL_SRCALPHA,
+  /* SDL2: SDL_SWSURFACE and SDL_SRCALPHA flags removed; 0 is the correct
+   * first argument.  Alpha is handled through the pixel format (amask != 0). */
+  SDL_Surface* tmp_surf = SDL_CreateRGBSurface(0,
                                           target_rect->w,
                                           target_rect->h,
                                           32,
@@ -188,30 +190,29 @@ void RoundCorners(SDL_Surface* s, Uint16 radius)
 SDL_Surface* Flip( SDL_Surface *in, int x, int y ) {
         SDL_Surface *out, *tmp;
         SDL_Rect from_rect, to_rect;
-        Uint32        flags;
-        Uint32  colorkey=0;
+        /* SDL2: surface flags no longer contain SDL_SRCCOLORKEY / SDL_SRCALPHA.
+         * Use the proper API calls to query and temporarily clear those states. */
+        SDL_bool has_colorkey;
+        Uint32   colorkey = 0;
+        Uint8    alpha_mod = 255;
 
-        /* --- grab the settings for the incoming pixmap --- */
+        /* --- query and temporarily disable colorkey & alpha on 'in' --- */
 
-        SDL_LockSurface(in);
-        flags = in->flags;
-
-        /* --- change in's flags so ignore colorkey & alpha --- */
-
-        if (flags & SDL_SRCCOLORKEY) {
-                in->flags &= ~SDL_SRCCOLORKEY;
-                colorkey = in->format->colorkey;
-        }
-        if (flags & SDL_SRCALPHA) {
-                in->flags &= ~SDL_SRCALPHA;
+        has_colorkey = SDL_HasColorKey(in);
+        if (has_colorkey) {
+                SDL_GetColorKey(in, &colorkey);
+                SDL_SetColorKey(in, SDL_FALSE, 0);
         }
 
-        SDL_UnlockSurface(in);
+        SDL_GetSurfaceAlphaMod(in, &alpha_mod);
+        if (alpha_mod != 255)
+                SDL_SetSurfaceAlphaMod(in, 255);
 
         /* --- create our new surface --- */
 
+        /* SDL2: SDL_SWSURFACE flag removed; use 0 */
         out = SDL_CreateRGBSurface(
-                SDL_SWSURFACE,
+                0,
                 in->w, in->h, 32, rmask, gmask, bmask, amask);
 
         /* --- flip horizontally if requested --- */
@@ -246,30 +247,26 @@ SDL_Surface* Flip( SDL_Surface *in, int x, int y ) {
                 } while (to_rect.y >= 0);
         }
 
-        /* --- restore colorkey & alpha on in and setup out the same --- */
+        /* --- restore colorkey / alpha on 'in' and apply to 'out' --- */
 
-        SDL_LockSurface(in);
-
-        if (flags & SDL_SRCCOLORKEY) {
-                in->flags |= SDL_SRCCOLORKEY;
-                in->format->colorkey = colorkey;
-                tmp = SDL_DisplayFormat(out);
+        if (has_colorkey) {
+                SDL_SetColorKey(in, SDL_TRUE, colorkey);     /* restore */
+                /* SDL2: SDL_DisplayFormat() → SDL_ConvertSurface() */
+                tmp = SDL_ConvertSurface(out, screen->format, 0);
                 SDL_FreeSurface(out);
                 out = tmp;
-                out->flags |= SDL_SRCCOLORKEY;
-                out->format->colorkey = colorkey;
-        } else if (flags & SDL_SRCALPHA) {
-                in->flags |= SDL_SRCALPHA;
-                tmp = SDL_DisplayFormatAlpha(out);
+                SDL_SetColorKey(out, SDL_TRUE, colorkey);
+        } else if (alpha_mod != 255) {
+                SDL_SetSurfaceAlphaMod(in, alpha_mod);       /* restore */
+                /* SDL2: SDL_DisplayFormatAlpha() → SDL_ConvertSurfaceFormat() */
+                tmp = SDL_ConvertSurfaceFormat(out, SDL_PIXELFORMAT_ARGB8888, 0);
                 SDL_FreeSurface(out);
                 out = tmp;
         } else {
-                tmp = SDL_DisplayFormat(out);
+                tmp = SDL_ConvertSurface(out, screen->format, 0);
                 SDL_FreeSurface(out);
                 out = tmp;
         }
-
-        SDL_UnlockSurface(in);
 
         return out;
 }
@@ -327,7 +324,8 @@ SDL_Surface* Blend(SDL_Surface* S1, SDL_Surface* S2, float gamma)
     }
   }
 
-  tmpS = SDL_ConvertSurface(S1, fmt1, SDL_SWSURFACE);
+  /* SDL2: SDL_SWSURFACE flag removed — use 0 */
+  tmpS = SDL_ConvertSurface(S1, fmt1, 0);
   if (tmpS == NULL)
   {
     perror("SDL_ConvertSurface() failed");
@@ -378,7 +376,7 @@ SDL_Surface* Blend(SDL_Surface* S1, SDL_Surface* S2, float gamma)
   if (S2 != NULL)
     SDL_UnlockSurface(S2);
 
-  ret = SDL_DisplayFormatAlpha(tmpS);
+  ret = SDL_ConvertSurfaceFormat(tmpS, SDL_PIXELFORMAT_ARGB8888, 0);
   SDL_FreeSurface(tmpS);
 
   return ret;
@@ -435,41 +433,37 @@ void DarkenScreen(Uint8 bits)
 
 void SwitchScreenMode(void)
 {
-  int window = (screen->flags & SDL_FULLSCREEN);
-  SDL_Surface* oldscreen = screen;
+  /* SDL2: check whether we are currently in fullscreen by asking the window,
+   * not by inspecting screen->flags (which no longer carries SDL_FULLSCREEN). */
+  int is_fullscreen = (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
 
-  if (!window)
+  if (!is_fullscreen)
   {
-    screen = SDL_SetVideoMode(fs_res_x,
-                              fs_res_y,
-                              BPP,
-                              SDL_SWSURFACE|SDL_HWPALETTE|SDL_FULLSCREEN);
+    /* Switch to fullscreen — use FULLSCREEN_DESKTOP to avoid a mode change. */
+    if (SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP) < 0)
+    {
+      fprintf(stderr,
+              "\nError: Could not switch to fullscreen mode.\n"
+              "SDL error: %s\n\n", SDL_GetError());
+      return;
+    }
   }
   else
   {
-    screen = SDL_SetVideoMode(RES_X,
-                              RES_Y,
-                              BPP,
-                              SDL_SWSURFACE|SDL_HWPALETTE);
-
+    /* Switch back to windowed mode. */
+    if (SDL_SetWindowFullscreen(window, 0) < 0)
+    {
+      fprintf(stderr,
+              "\nError: Could not switch to windowed mode.\n"
+              "SDL error: %s\n\n", SDL_GetError());
+      return;
+    }
   }
 
-  if (screen == NULL)
-  {
-    fprintf(stderr,
-            "\nError: I could not switch to %s mode.\n"
-            "The Simple DirectMedia error that occured was:\n"
-            "%s\n\n",
-            window ? "windowed" : "fullscreen",
-            SDL_GetError());
-    screen = oldscreen;
-  }
-  else
-  {
-    SDL_FreeSurface(oldscreen);
-    oldscreen = NULL;
-    SDL_UpdateRect(screen, 0, 0, 0, 0);
-  }
+  /* SDL2: after toggling fullscreen the surface pointer may change — refresh. */
+  screen = SDL_GetWindowSurface(window);
+  if (screen)
+    SDL_UpdateWindowSurface(window);
 
 }
 
@@ -512,7 +506,8 @@ SDL_Surface* zoom(SDL_Surface* src, int new_w, int new_h)
 
   /* Create surface for zoom: */
 
-  s = SDL_CreateRGBSurface(src->flags,        /* SDL_SWSURFACE, */
+  /* SDL2: SDL_SWSURFACE flag removed — use 0; src->flags no longer relevant */
+  s = SDL_CreateRGBSurface(0,
                            new_w, new_h, src->format->BitsPerPixel,
                            src->format->Rmask,
                            src->format->Gmask,
@@ -691,7 +686,7 @@ int TransWipe(const SDL_Surface* newbkg, int type, int segments, int duration)
       src.w = screen->w;
       src.h = screen->h;
       SDL_BlitSurface(newbkg, NULL, screen, &src);
-      SDL_Flip(screen);
+      SDL_UpdateWindowSurface(window); /* SDL2: SDL_Flip removed */
 
       break;
     } 
@@ -730,7 +725,7 @@ int TransWipe(const SDL_Surface* newbkg, int type, int segments, int duration)
       src.w = screen->w;
       src.h = screen->h;
       SDL_BlitSurface(newbkg, NULL, screen, &src);
-      SDL_Flip(screen);
+      SDL_UpdateWindowSurface(window); /* SDL2: SDL_Flip removed */
 
       break;
     }
@@ -785,7 +780,7 @@ int TransWipe(const SDL_Surface* newbkg, int type, int segments, int duration)
       src.w = screen->w;
       src.h = screen->h;
       SDL_BlitSurface(newbkg, NULL, screen, &src);
-      SDL_Flip(screen);
+      SDL_UpdateWindowSurface(window); /* SDL2: SDL_Flip removed */
 
       break;
     }
@@ -1032,7 +1027,9 @@ void UpdateScreen(int* frame)
 //  if (SNOW_on) 
 //    SDL_UpdateRects(screen, SNOW_add( (SDL_Rect*)&dstupdate, numupdates ), SNOW_rects);
 //  else 
-    SDL_UpdateRects(screen, numupdates, dstupdate);
+    /* SDL2: SDL_UpdateRects() removed; SDL_UpdateWindowSurfaceRects() is the
+     * equivalent — note the argument order is (window, rects, count). */
+    SDL_UpdateWindowSurfaceRects(window, dstupdate, numupdates);
 
   numupdates = 0;
   *frame = *frame + 1;
@@ -1214,8 +1211,11 @@ int Setup_SDL_Text(void)
   }
 #endif
 
-  SDL_EnableKeyRepeat(0, SDL_DEFAULT_REPEAT_INTERVAL);
-  SDL_EnableUNICODE(1);
+  /* SDL2: SDL_EnableKeyRepeat() and SDL_EnableUNICODE() have been removed.
+   * Key repeat is always active in SDL2 (check event.key.repeat != 0 to
+   * ignore auto-repeat events).  Unicode text input is delivered via
+   * SDL_TEXTINPUT events after calling SDL_StartTextInput(). */
+  SDL_StartTextInput();
   return 1;
 }
 
@@ -1297,7 +1297,8 @@ DEBUGCODE
     return NULL;
   }
 
-  bg = SDL_CreateRGBSurface(SDL_SWSURFACE,
+  /* SDL2: SDL_SWSURFACE flag removed; use 0 */
+  bg = SDL_CreateRGBSurface(0,
                             (black_letters->w) + 5,
                             (black_letters->h) + 5,
                              32,
@@ -1348,9 +1349,11 @@ DEBUGCODE
   SDL_BlitSurface(white_letters, NULL, bg, &dstrect);
   SDL_FreeSurface(white_letters);
 
-  /* --- Convert to the screen format for quicker blits --- */
-  SDL_SetColorKey(bg, SDL_SRCCOLORKEY|SDL_RLEACCEL, color_key);
-  out = SDL_DisplayFormatAlpha(bg);
+  /* --- Convert to a format suitable for quick blits --- */
+  /* SDL2: SDL_SRCCOLORKEY|SDL_RLEACCEL flag combo → SDL_TRUE only.
+   * SDL_DisplayFormatAlpha() → SDL_ConvertSurfaceFormat() with explicit format. */
+  SDL_SetColorKey(bg, SDL_TRUE, color_key);
+  out = SDL_ConvertSurfaceFormat(bg, SDL_PIXELFORMAT_ARGB8888, 0);
   SDL_FreeSurface(bg);
 
 DEBUGCODE
@@ -1479,8 +1482,8 @@ static int Set_SDL_Pango_Font_Size(int size)
     context =  SDLPango_CreateContext_GivenFontDesc(buf);
 #else
     fprintf(stderr, "SDL_Pango version is missing needed function:\n"
-		    "SDLPango_CreateContext_GivenFontDesc()\n"
-		    "Will not be able to set font size.\n");
+                    "SDLPango_CreateContext_GivenFontDesc()\n"
+                    "Will not be able to set font size.\n");
 #endif    
   }
 
@@ -1593,7 +1596,7 @@ static TTF_Font* load_font(const char* font_name, int font_size)
     return loaded_font;
   }
 
-		
+                
 
   /* HACK hard-coded for Debian (and current exact font names): */ 
 

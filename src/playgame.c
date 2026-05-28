@@ -408,7 +408,7 @@ int PlayCascade(int diflevel)
 				else
 				{
 					/* See what Unicode value was typed: */
-					key_unicode = event.key.keysym.unicode;
+					key_unicode = event.key.keysym.sym; /* SDL2: .unicode removed; .sym matches ASCII */
 
 					DEBUGCODE
 					{fprintf(stderr, "\nkey_unicode = %d\twchar_t = %lc\t\n", key_unicode, key_unicode);}

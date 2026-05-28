@@ -237,7 +237,7 @@ void ChooseListToEdit(void)
     titleRects[i].x = screen->w / 10;
   }
 
-  SDL_UpdateRect(screen, 0, 0, 0, 0);
+  SDL_UpdateWindowSurface(window); /* SDL2 */
   
   /* Event loop for this screen: */
   while (!stop)
@@ -434,8 +434,7 @@ void ChooseListToEdit(void)
           SDL_BlitSurface(yellow_titles_surf[loc], NULL, screen, &titleRects[i % 8]);
         else
           SDL_BlitSurface(white_titles_surf[i], NULL, screen, &titleRects[i % 8]);
-        SDL_UpdateRect(screen, titleRects[i%8].x, titleRects[i%8].y,
-                               titleRects[i%8].w, titleRects[i%8].h);
+        SDL_UpdateWindowSurface(window); /* SDL2 */
       }
 
       /* --- draw right and left arrow buttons --- */
@@ -444,7 +443,7 @@ void ChooseListToEdit(void)
       if (start + 8 < num_lists) 
         SDL_BlitSurface(right, NULL, screen, &rightRect);
 
-      SDL_UpdateRect(screen, 0, 0, 0, 0); 
+      SDL_UpdateWindowSurface(window); /* SDL2 */ 
       redraw = 0;
     }
     SDL_Delay(40);
@@ -844,7 +843,7 @@ void EditWordList(char* words_file)
             if (len < MAX_WORD_SIZE - 1)
             {
               // Add the character to the end of the existing string
-              temp[len] = toupper(event.key.keysym.unicode);
+              temp[len] = toupper(event.key.keysym.sym /* SDL2: .unicode removed */);
               temp[len + 1] = 0;
               ConvertToUTF8(temp, words_in_list[loc + 1], MAX_WORD_SIZE);
 
@@ -889,7 +888,7 @@ void EditWordList(char* words_file)
         if (start + 8 < number_of_words-1) 
           SDL_BlitSurface(right, NULL, screen, &rightRect);
 
-        SDL_UpdateRect(screen, 0, 0, 0 ,0);
+        SDL_UpdateWindowSurface(window); /* SDL2 */
       }
       SDL_Delay(40);  // I assume throttling so we don't eat all CPU
       old_loc = loc;
@@ -1035,7 +1034,7 @@ int CreateNewWordList(void)
   Text.w = Text.h =  0; 
   Text.x = screen->w /2;
 
-  SDL_UpdateRect(screen, 0, 0, 0, 0);
+  SDL_UpdateWindowSurface(window); /* SDL2 */
 
   /*Main Loop*/
   while (!stop)
@@ -1126,7 +1125,7 @@ int CreateNewWordList(void)
             if (len < MAX_WORD_SIZE)
             {
               // adds a character to the end of existing string
-              temp[len] = toupper(event.key.keysym.unicode);
+              temp[len] = toupper(event.key.keysym.sym /* SDL2: .unicode removed */);
               temp[len + 1] = 0;
             }
             len = ConvertToUTF8(temp, wordlist, MAX_WORD_SIZE);
@@ -1177,7 +1176,7 @@ int CreateNewWordList(void)
 
         SDL_BlitSurface(NewWordlist, NULL, screen, &Text);
 
-        SDL_UpdateRect(screen, 0, 0, 0, 0);
+        SDL_UpdateWindowSurface(window); /* SDL2 */
       }
     }  // End of 'while (SDL_PollEvent(&event))' loop
   } // End of 'while(!stop)' loop
@@ -1276,7 +1275,7 @@ int ChooseRemoveList(char *name, char *filename)
   wordname_rect.y = screen->h/3 + 30;
   SDL_BlitSurface(wordname, NULL, screen, &wordname_rect);
 
-  SDL_UpdateRect(screen, 0, 0, 0, 0);
+  SDL_UpdateWindowSurface(window); /* SDL2 */
 
   while (!stop) 
   {

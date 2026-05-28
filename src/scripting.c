@@ -493,7 +493,7 @@ int XMLLesson(void)
       if (start + 8 < num_scripts)
         SDL_BlitSurface(right, NULL, screen, &rightRect);
 
-      SDL_UpdateRect(screen, 0, 0, 0 ,0);
+      SDL_UpdateWindowSurface(window); /* SDL2 */
     }
 
     SDL_Delay(40);
@@ -1446,7 +1446,7 @@ static void run_script(void)
           int done = 0;
 
           // Make sure everything is on screen 
-          SDL_Flip(screen);
+          SDL_UpdateWindowSurface(window); /* SDL2 */
           
           /* Announce the lesson instruction */
 		  T4K_Tts_say(DEFAULT_VALUE,DEFAULT_VALUE,INTERRUPT,"%s",tts_buffer);
@@ -1524,7 +1524,7 @@ static void run_script(void)
           
           
           // Make sure everything is on screen 
-          SDL_Flip(screen);
+          SDL_UpdateWindowSurface(window); /* SDL2 */
           
           
 
@@ -1607,7 +1607,7 @@ static void run_script(void)
     }
     
     
-    SDL_Flip(screen);
+    SDL_UpdateWindowSurface(window); /* SDL2 */
     SDL_Delay(30);
         
         

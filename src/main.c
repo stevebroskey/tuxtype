@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "SDL_extras.h"
 
 SDL_Surface* screen;
+SDL_Window*  window = NULL;  /* SDL2: explicit window handle */
 SDL_Event  event;
 
 
@@ -133,16 +134,16 @@ int main(int argc, char *argv[])
       if (  (strcmp(argv[i], "-a") == 0)
          || (strcmp(argv[i], "--tts") == 0))
          {
-			 settings.tts = 1;
-			 text_to_speech_status = 1;
-		 }
+                         settings.tts = 1;
+                         text_to_speech_status = 1;
+                 }
 
       if (  (strcmp(argv[i], "-na") == 0)
          || (strcmp(argv[i], "--notts") == 0))
          {
-			 settings.tts = 0;
-			 text_to_speech_status = 0;
-		 }
+                         settings.tts = 0;
+                         text_to_speech_status = 0;
+                 }
 
       if (  (strcmp(argv[i], "-b") == 0)
          || (strcmp(argv[i], "--braille") == 0))
@@ -193,7 +194,7 @@ int main(int argc, char *argv[])
   lib_flags |= SDL_INIT_AUDIO;
 
   LibInit(lib_flags); /* calls SDL_Init(), TTF_Init(), some other settings */
-  GraphicsInit(); /* calls SDL_SetVideoMode(), a few others     */
+  GraphicsInit(); /* SDL2: creates window + surface (see setup.c) */
 
   if (settings.sys_sound)
   {

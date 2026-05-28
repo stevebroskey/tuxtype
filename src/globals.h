@@ -89,7 +89,7 @@ extern SDL_Thread *tts_thread;
 //TTS Word announcer Thread
 extern SDL_Thread *tts_announcer_thread;
 
-#define FNLEN	256
+#define FNLEN   256
 
 
 /* (renamed from 'settings' to match tuxmath) */
@@ -126,10 +126,10 @@ extern int text_to_speech_status;
 
 struct braille_dict
 {
-	wchar_t key[100];
-	wchar_t value_begin[100];
-	wchar_t value_middle[100];
-	wchar_t value_end[100];
+        wchar_t key[100];
+        wchar_t value_begin[100];
+        wchar_t value_middle[100];
+        wchar_t value_end[100];
 };
 
 extern struct braille_dict braille_key_value_map[100];
@@ -139,9 +139,9 @@ extern struct braille_dict braille_key_value_map[100];
 /* They can be changed in the struct to other values at run-time */
 #define DEFAULT_FONT_NAME       "AndikaDesRevG.ttf"
 #define DEFAULT_GAME_FONT       "AndikaDesRevG.ttf" 
-#define DEFAULT_MENU_FONT_SIZE	20
-#define GAME_FONT_SIZE	20
-#define DEFAULT_LOCALE	        "en_US.UTF-8"
+#define DEFAULT_MENU_FONT_SIZE  20
+#define GAME_FONT_SIZE  20
+#define DEFAULT_LOCALE          "en_US.UTF-8"
 #define DEFAULT_USE_ENGLISH 1
 #define DEFAULT_FULLSCREEN 1
 #define DEFAULT_BRAILLE 0
@@ -164,12 +164,21 @@ extern struct braille_dict braille_key_value_map[100];
 /* FIXME get rid of as much global data as possible, esp. pointers */
 extern game_option_type settings;
 extern SDL_Surface* screen;
+extern SDL_Window*  window;   /* SDL2: explicit window handle */
 extern SDL_Event  event;
 
 /* these will store the resolution used by the OS when we start, so we */
 /* can run fullscreen at the user's preferred resolution:              */
 extern int fs_res_x;
 extern int fs_res_y;
+
+/* SDL2 compatibility typedefs:
+ * - SDLKey was renamed SDL_Keycode in SDL2.
+ * - SDL_keysym struct was renamed SDL_Keysym (capital K) in SDL2.
+ *   SDL2 does NOT provide a backward-compat typedef, so we add one here.
+ */
+typedef SDL_Keycode SDLKey;
+typedef SDL_Keysym  SDL_keysym;
 
 
 
@@ -198,9 +207,9 @@ extern int fs_res_y;
 /* Various preprocessor constants: ------------------------- */
 
 
-#define RES_X	640
-#define RES_Y	480
-#define BPP	32
+#define RES_X   640
+#define RES_Y   480
+#define BPP     32
 
 /* Limits on word list size, word length, and on the number of distinct characters */
 /* that can be present within a word list: */
@@ -209,15 +218,15 @@ extern int fs_res_y;
 #define MAX_WORD_LISTS  100
 #define MAX_UNICODES    1024
 
-#define WAIT_MS		2500
-#define	FRAMES_PER_SEC	15
-#define FULL_CIRCLE	140
+#define WAIT_MS         2500
+#define FRAMES_PER_SEC  15
+#define FULL_CIRCLE     140
 
 
 /* Title sequence constants */
-#define PRE_ANIM_FRAMES	 10
-#define PRE_FRAME_MULT	 3
-#define MENU_SEP	 20
+#define PRE_ANIM_FRAMES  10
+#define PRE_FRAME_MULT   3
+#define MENU_SEP         20
 
 
 #define IMG_REGULAR  0x01
@@ -232,7 +241,7 @@ extern int fs_res_y;
 #define REG_RGBA 16,16,96,96
 #define SEL_RGBA 16,16,128,128
 
-#define MUSIC_FADE_OUT_MS	80
+#define MUSIC_FADE_OUT_MS       80
 
 /* Menu Prototypes */
 enum Game_Type { 
@@ -269,14 +278,14 @@ extern const int debug_titlescreen;
 /* Names for game sounds (formerly in sounds.h): */
 enum {
     SND_HARP,
-	SND_POP,
-	SND_LASER,
-	SND_BUZZ,
-	SND_ALARM,
-	SND_SHIELDSDOWN,
-	SND_EXPLOSION,
-	SND_TOCK,
-	NUM_SOUNDS
+        SND_POP,
+        SND_LASER,
+        SND_BUZZ,
+        SND_ALARM,
+        SND_SHIELDSDOWN,
+        SND_EXPLOSION,
+        SND_TOCK,
+        NUM_SOUNDS
 };
 
 

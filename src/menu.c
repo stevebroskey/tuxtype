@@ -636,7 +636,7 @@ static int chooseWordlist(void)
       if (start + 8 < lists)
         SDL_BlitSurface(right, NULL, screen, &rightRect);
 
-      SDL_UpdateRect(screen, 0, 0, 0 ,0);
+      SDL_UpdateWindowSurface(window); /* SDL2 */
     }
 
     SDL_Delay(40);

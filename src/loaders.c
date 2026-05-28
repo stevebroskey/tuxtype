@@ -110,21 +110,21 @@ void LoadLang(void)
   /* Loading braille Map */
   if (settings.braille)
   {
-	  char file_name[100];
-	  if(settings.use_english){
-			sprintf(file_name,"english.txt");
-	  }
-	  else{
-		  sprintf(file_name,"%s.txt",settings.theme_name);
-	  }
-	  
-	  //If map not found then disable braille mode
-	  if (braille_language_loader(file_name) == 0){
-		  T4K_Tts_say(DEFAULT_VALUE,DEFAULT_VALUE,APPEND
-				,gettext("Braille mode is not available for this language. Braille disabled!"));
-		  DEBUGCODE{  fprintf(stderr,"Braille disabled!"); }
-		  settings.braille = 0;
-	  }
+          char file_name[100];
+          if(settings.use_english){
+                        sprintf(file_name,"english.txt");
+          }
+          else{
+                  sprintf(file_name,"%s.txt",settings.theme_name);
+          }
+          
+          //If map not found then disable braille mode
+          if (braille_language_loader(file_name) == 0){
+                  T4K_Tts_say(DEFAULT_VALUE,DEFAULT_VALUE,APPEND
+                                ,gettext("Braille mode is not available for this language. Braille disabled!"));
+                  DEBUGCODE{  fprintf(stderr,"Braille disabled!"); }
+                  settings.braille = 0;
+          }
   }
 
   /* Setting TTS language 
@@ -132,8 +132,8 @@ void LoadLang(void)
    sprintf(tts_language,"%.*s",2,buf);
    if (!T4K_Tts_set_voice(tts_language))
    {
-	 T4K_Tts_say(DEFAULT_VALUE,DEFAULT_VALUE,APPEND,
-		gettext("Tts is not available for this language. Tts disabled!"));
+         T4K_Tts_say(DEFAULT_VALUE,DEFAULT_VALUE,APPEND,
+                gettext("Tts is not available for this language. Tts disabled!"));
      settings.tts = 0;
      text_to_speech_status = 0;
    }
@@ -224,7 +224,9 @@ SDL_Surface* LoadSVGOfDimensions(char* filename, int width, int height)
   Bmask = 0x000000ff;
   Amask = 0xff000000;
 
-  dest = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA,
+  /* SDL2: flags argument is unused (always 0); SDL_SRCALPHA is gone.   */
+  /* Alpha support comes from the pixel format (Amask != 0) directly.   */
+  dest = SDL_CreateRGBSurface(0,
         width, height, bpp, Rmask, Gmask, Bmask, Amask);
 
   SDL_LockSurface(dest);
@@ -299,7 +301,7 @@ SDL_Surface* LoadImageFromFile(char *datafile)
 }
 
 /***********************
-	LoadImage : Load an image and set transparent if requested
+        LoadImage : Load an image and set transparent if requested
 ************************/
 SDL_Surface* LoadImage(const char* datafile, int mode)
 {
@@ -346,26 +348,32 @@ SDL_Surface* LoadImage(const char* datafile, int mode)
   switch (mode & IMG_MODES)
   {
     case IMG_REGULAR:
-    { 
-      final_pic = SDL_DisplayFormat(tmp_pic);
+    {
+      /* SDL2: SDL_DisplayFormat() removed — SDL_ConvertSurface() is the
+       * equivalent. Pass screen->format to match the display pixel format. */
+      final_pic = SDL_ConvertSurface(tmp_pic, screen->format, 0);
       SDL_FreeSurface(tmp_pic);
       break;
     }
 
     case IMG_ALPHA:
     {
-      final_pic = SDL_DisplayFormatAlpha(tmp_pic);
+      /* SDL2: SDL_DisplayFormatAlpha() removed — use SDL_ConvertSurfaceFormat
+       * with an explicit ARGB8888 target so the alpha channel is preserved. */
+      final_pic = SDL_ConvertSurfaceFormat(tmp_pic, SDL_PIXELFORMAT_ARGB8888, 0);
       SDL_FreeSurface(tmp_pic);
       break;
     }
 
     case IMG_COLORKEY:
     {
+      /* SDL2: SDL_SRCCOLORKEY | SDL_RLEACCEL flag combo → SDL_TRUE flag only.
+       * RLE acceleration is managed internally by SDL2. */
       SDL_LockSurface(tmp_pic);
       SDL_SetColorKey(tmp_pic,
-                      (SDL_SRCCOLORKEY | SDL_RLEACCEL),
+                      SDL_TRUE,
                       SDL_MapRGB(tmp_pic->format, 255, 255, 0));
-      final_pic = SDL_DisplayFormat(tmp_pic);
+      final_pic = SDL_ConvertSurface(tmp_pic, screen->format, 0);
       SDL_FreeSurface(tmp_pic);
       break;
     }
@@ -441,7 +449,8 @@ SDL_Surface* CurrentBkgd(void)
 {
   if (!screen)
     return NULL;
-  if (screen->flags & SDL_FULLSCREEN)
+  /* SDL2: surface flags no longer include SDL_FULLSCREEN — check the window. */
+  if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP)
     return fullscr_bkgd;
   else
     return win_bkgd;
@@ -460,46 +469,46 @@ void FreeBothBkgds(void)
 
 
 sprite* FlipSprite(sprite* in, int X, int Y ) {
-	sprite* out;
+        sprite* out;
 
-	out = malloc(sizeof(sprite));
-	if (in->default_img != NULL)
-		out->default_img = Flip( in->default_img, X, Y );
-	else
-		out->default_img = NULL;
-	for ( out->num_frames=0; out->num_frames<in->num_frames; out->num_frames++ )
-		out->frame[out->num_frames] = Flip( in->frame[out->num_frames], X, Y );
-	out->cur = 0;
-	return out;
+        out = malloc(sizeof(sprite));
+        if (in->default_img != NULL)
+                out->default_img = Flip( in->default_img, X, Y );
+        else
+                out->default_img = NULL;
+        for ( out->num_frames=0; out->num_frames<in->num_frames; out->num_frames++ )
+                out->frame[out->num_frames] = Flip( in->frame[out->num_frames], X, Y );
+        out->cur = 0;
+        return out;
 }
 
 sprite* LoadSprite(const char* name, int MODE ) {
-	sprite *new_sprite;
-	char fn[FNLEN];
-	int x;
+        sprite *new_sprite;
+        char fn[FNLEN];
+        int x;
 
-	/* JA --- HACK check out what has changed with new code */
+        /* JA --- HACK check out what has changed with new code */
 
-	new_sprite = malloc(sizeof(sprite));
+        new_sprite = malloc(sizeof(sprite));
 
-	sprintf(fn, "%sd.png", name);
-	new_sprite->default_img = LoadImage( fn, MODE|IMG_NOT_REQUIRED );
-	for (x = 0; x < MAX_SPRITE_FRAMES; x++) {
-		sprintf(fn, "%s%d.png", name, x);
-		new_sprite->frame[x] = LoadImage( fn, MODE|IMG_NOT_REQUIRED );
-		if ( new_sprite->frame[x] == NULL ) {
-			new_sprite->cur = 0;
-			new_sprite->num_frames = x;
-			break;
-		}
-	}
+        sprintf(fn, "%sd.png", name);
+        new_sprite->default_img = LoadImage( fn, MODE|IMG_NOT_REQUIRED );
+        for (x = 0; x < MAX_SPRITE_FRAMES; x++) {
+                sprintf(fn, "%s%d.png", name, x);
+                new_sprite->frame[x] = LoadImage( fn, MODE|IMG_NOT_REQUIRED );
+                if ( new_sprite->frame[x] == NULL ) {
+                        new_sprite->cur = 0;
+                        new_sprite->num_frames = x;
+                        break;
+                }
+        }
 
-	DEBUGCODE {
-		fprintf( stderr, "loading sprite %s - contains %d frames\n",
-		        name, new_sprite->num_frames );
-	}
+        DEBUGCODE {
+                fprintf( stderr, "loading sprite %s - contains %d frames\n",
+                        name, new_sprite->num_frames );
+        }
 
-	return new_sprite;
+        return new_sprite;
 }
 
 void FreeSprite(sprite* gfx )
@@ -520,7 +529,7 @@ void FreeSprite(sprite* gfx )
 }
 
 /***************************
-	LoadSound : Load a sound/music patch from a file.
+        LoadSound : Load a sound/music patch from a file.
 ****************************/
 Mix_Chunk* LoadSound(const char* datafile )
 { 
@@ -551,8 +560,8 @@ Mix_Chunk* LoadSound(const char* datafile )
 
 
 /************************
-	LoadMusic : Load
-	music from a datafile
+        LoadMusic : Load
+        music from a datafile
 *************************/
 Mix_Music* LoadMusic(const char* datafile )
 { 
