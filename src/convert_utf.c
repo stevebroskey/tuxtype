@@ -66,6 +66,8 @@ int ConvertFromUTF8(wchar_t* wide_word, const char* UTF8_word, int max_length)
   bytes_converted = iconv(conv_descr,
                           (char**) &UTF8_word, &in_length,
                           (char**) &wchar_start, &out_length);
+  if (bytes_converted == (size_t)-1)
+    fprintf(stderr, "ConvertFromUTF8(): iconv() conversion error\n");
   iconv_close(conv_descr);
   wcsncpy(wide_word, temp_wchar, max_length);
 
@@ -116,6 +118,8 @@ int ConvertToUTF8(const wchar_t* wide_word, char* UTF8_word, int max_length)
   bytes_converted = iconv(conv_descr,
                           (char**) &wide_word, &in_length,
                           (char**) &UTF8_Start, &out_length);
+  if (bytes_converted == (size_t)-1)
+    fprintf(stderr, "ConvertToUTF8(): iconv() conversion error\n");
   iconv_close(conv_descr);
   strncpy(UTF8_word, temp_UTF8, max_length);
 
