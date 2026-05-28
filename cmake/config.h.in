@@ -1,0 +1,42 @@
+/* cmake/config.h.in — processed by CMake configure_file()
+ *
+ * This replaces the autoconf-generated config.h.
+ * Do NOT edit config.h directly — edit this file instead.
+ */
+#ifndef TUXTYPE_CONFIG_H
+#define TUXTYPE_CONFIG_H
+
+/* Package identity */
+#define PACKAGE "tuxtype"
+#define VERSION "@PROJECT_VERSION@"
+
+/* Install paths — set at cmake time via -DTUXTYPE_DATA_PREFIX=... */
+#define DATA_PREFIX "@TUXTYPE_DATA_PREFIX@"
+#define VAR_PREFIX  "@TUXTYPE_VAR_PREFIX@"
+#define CONF_PREFIX "@TUXTYPE_CONF_PREFIX@"
+#define LOCALEDIR   "@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_LOCALEDIR@"
+
+/* SDL2 auxiliary libraries (all required) */
+#define HAVE_LIBSDL_IMAGE 1
+#define HAVE_LIBSDL_MIXER 1
+#define HAVE_LIBSDL_TTF   1
+
+/* SDL_Pango: intentionally NOT defined.
+ * SDL_Pango is abandoned and unavailable on modern systems.
+ * The SDL_ttf code path (guarded by #else in SDL_extras.c) is used instead.
+ */
+/* #undef HAVE_LIBSDL_PANGO */
+
+/* SDL_mixer 2.x always supports Mix_Init() */
+#define HAVE_MIX_INIT 1
+
+/* t4k_common: optional — provides TTS and shared audio helpers.
+ * Set to 1 if found at cmake time, 0 otherwise. */
+#define HAVE_LIBT4K_COMMON @HAVE_LIBT4K_COMMON@
+
+/* SDL2 compatibility note:
+ * SDL_Pango's SDLPango_CreateContext_GivenFontDesc() is not used.
+ */
+/* #undef HAVE_SDLPANGO_CREATECONTEXT_GIVENFONTDESC */
+
+#endif /* TUXTYPE_CONFIG_H */
