@@ -76,7 +76,12 @@ set(TUXTYPE_CONF_PREFIX
     CACHE PATH "System-wide configuration")
 
 # ── Generate config.h ──────────────────────────────────────────────────────
-configure_file(cmake/config.h.in "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
+# The original autoconf build generated config.h in the project root.
+# Several source files in src/ use #include "../config.h" (one level up from
+# src/), which resolves to the project root — NOT the build directory.
+# We replicate the old location so those relative includes keep working.
+# config.h is already in .gitignore so this does not pollute version control.
+configure_file(cmake/config.h.in "${CMAKE_CURRENT_SOURCE_DIR}/config.h" @ONLY)
 
 # ── Source files ───────────────────────────────────────────────────────────
 set(TUXTYPE_SOURCES
@@ -109,7 +114,7 @@ set(TUXTYPE_SOURCES
 add_executable(tuxtype ${TUXTYPE_SOURCES})
 
 target_include_directories(tuxtype PRIVATE
-  "${CMAKE_CURRENT_BINARY_DIR}"   # config.h lives here
+  "${CMAKE_CURRENT_SOURCE_DIR}"   # config.h generated here (matches "../config.h" from src/)
   src                              # local headers (globals.h, funcs.h, etc.)
 )
 
