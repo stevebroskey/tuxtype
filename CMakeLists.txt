@@ -45,6 +45,23 @@ endif()
 find_package(Intl QUIET)
 find_package(Iconv QUIET)
 
+# ENABLE_NLS must be set BEFORE config.h is generated.
+# On Ubuntu 22/24 SDL2 headers transitively pull in libintl.h, which declares
+# ngettext() as a function.  If gettext.h's #else-branch has already defined
+# ngettext() as a fallback macro, the two definitions collide and the compiler
+# emits "expected identifier before 'const'" errors all over globals.h.
+# The fix: always tell gettext.h whether real NLS is available so it either
+# (a) includes libintl.h itself first (ENABLE_NLS=1), or
+# (b) deliberately skips its fallback macros and we rely on libintl directly.
+# Either way libintl.h is never included twice with conflicting declarations.
+if(Intl_FOUND)
+  set(HAVE_NLS 1)
+  message(STATUS "libintl found — NLS enabled (ENABLE_NLS=1)")
+else()
+  set(HAVE_NLS 0)
+  message(STATUS "libintl not found — NLS disabled (ENABLE_NLS=0)")
+endif()
+
 # ── Install paths ──────────────────────────────────────────────────────────
 include(GNUInstallDirs)
 
@@ -120,6 +137,11 @@ endif()
 # Needed on some Linux distros for pthreads (used by SDL2):
 find_package(Threads REQUIRED)
 target_link_libraries(tuxtype PRIVATE Threads::Threads)
+
+# ── Compile definitions ────────────────────────────────────────────────────
+# ENABLE_NLS must be passed as a -D flag so gettext.h sees it even before
+# config.h is included (some translation units include gettext.h very early).
+target_compile_definitions(tuxtype PRIVATE ENABLE_NLS=${HAVE_NLS})
 
 # ── Compile flags ──────────────────────────────────────────────────────────
 target_compile_options(tuxtype PRIVATE
