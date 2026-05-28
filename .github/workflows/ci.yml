@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# Cancel an in-progress run for the same branch when a new push arrives.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & Coverage (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      # Let both OS jobs finish even if one fails, so you see the full picture.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # ── Dependencies ──────────────────────────────────────────────────────
+      - name: Install build & SDL2 dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            cmake build-essential pkg-config \
+            libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+            libxml2-dev \
+            lcov \
+            libcmocka-dev
+
+      # ── Configure ─────────────────────────────────────────────────────────
+      # COVERAGE=ON  → compiles every .c with -O0 --coverage (gcov instrumentation)
+      # BUILD_TESTING=ON → builds any CMocka test targets found in tests/
+      - name: Configure (Debug + coverage + tests)
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCOVERAGE=ON \
+            -DBUILD_TESTING=ON
+
+      # ── Build ─────────────────────────────────────────────────────────────
+      - name: Build
+        run: cmake --build build --parallel $(nproc)
+
+      # ── Tests ─────────────────────────────────────────────────────────────
+      # Tests are run with `|| true` so a failure doesn't skip the coverage
+      # report.  CTest prints which tests passed/failed in the log regardless.
+      - name: Run tests (non-blocking)
+        run: |
+          cd build
+          ctest --output-on-failure --no-compress-output -T Test || true
+
+      # ── Coverage ──────────────────────────────────────────────────────────
+      # We generate a full HTML report and a summary line.
+      # NO threshold is enforced here — the percentage is reported so the
+      # team can watch it trend upward over time.
+      - name: Generate coverage data
+        run: |
+          # Collect .gcda files produced during the test run.
+          lcov \
+            --capture \
+            --directory build \
+            --output-file build/coverage.info \
+            --no-external \
+            --ignore-errors mismatch,empty
+
+          # Strip out generated files (config.h, etc.) and test scaffolding.
+          lcov \
+            --remove build/coverage.info \
+              '*/build/*' \
+              '*/tests/*' \
+            --output-file build/coverage-filtered.info \
+            --ignore-errors unused
+
+      - name: Render HTML report
+        run: |
+          genhtml build/coverage-filtered.info \
+            --output-directory build/coverage-html \
+            --title "TuxType – ${{ matrix.os }} – ${{ github.ref_name }}" \
+            --legend \
+            --demangle-cpp
+
+      # ── Extract percentage & post to job summary ───────────────────────
+      # The summary is the first thing reviewers see on the Actions tab.
+      # "Encourage without requiring" means we show the number loudly but
+      # never set a pass/fail threshold.
+      - name: Post coverage summary
+        run: |
+          # Pull the line-coverage percentage out of lcov's summary output.
+          SUMMARY=$(lcov --summary build/coverage-filtered.info 2>&1 || true)
+          LINE_PCT=$(echo "$SUMMARY" | grep -oP 'lines\.*: \K[\d.]+(?=%)' || echo "n/a")
+          FUNC_PCT=$(echo "$SUMMARY" | grep -oP 'functions\.*: \K[\d.]+(?=%)' || echo "n/a")
+          BRANCH_PCT=$(echo "$SUMMARY" | grep -oP 'branches\.*: \K[\d.]+(?=%)' || echo "n/a")
+
+          echo "LINE_PCT=${LINE_PCT}" >> "$GITHUB_ENV"
+
+          # ── GitHub Actions job summary (shown in the Actions UI) ──────
+          {
+            echo "## 📊 Code Coverage — ${{ matrix.os }}"
+            echo ""
+            echo "| Metric | Coverage |"
+            echo "|--------|----------|"
+            echo "| Lines | **${LINE_PCT}%** |"
+            echo "| Functions | **${FUNC_PCT}%** |"
+            echo "| Branches | **${BRANCH_PCT}%** |"
+            echo ""
+            echo "> **No hard threshold is enforced.** The goal is to grow"
+            echo "> coverage incrementally as new unit tests are added."
+            echo "> Aim for **80 %** lines over time — watch the trend, not a gate."
+            echo ""
+            echo "Download the full HTML report from the **Artifacts** section below."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Also echo to the regular log for quick reference.
+          echo "Coverage: lines=${LINE_PCT}%  functions=${FUNC_PCT}%  branches=${BRANCH_PCT}%"
+
+      # ── Upload HTML report as a downloadable artifact ─────────────────
+      - name: Upload coverage report
+        if: always()   # upload even when tests fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html-${{ matrix.os }}
+          path: build/coverage-html/
+          # Keep for 30 days so PRs that take a while to review still have it.
+          retention-days: 30
