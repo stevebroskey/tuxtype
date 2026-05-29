@@ -156,7 +156,7 @@ int PlayCascade(int diflevel)
 
   //Call announcer function in thread which annonces the word to type 
   if(settings.tts)
-	tts_announcer_thread = SDL_CreateThread(tts_announcer, &struct_with_data_address);
+	tts_announcer_thread = SDL_CreateThread(tts_announcer, "tts_announcer", &struct_with_data_address);
   
 
   DEBUGCODE
@@ -375,7 +375,7 @@ int PlayCascade(int diflevel)
 				  T4K_Tts_say(DEFAULT_VALUE,DEFAULT_VALUE,INTERRUPT,gettext("Pause Released!"));
 				  //Call announcer function in thread which annonces the word to type
 				  if(settings.tts)
-						tts_announcer_thread = SDL_CreateThread(tts_announcer, &struct_with_data_address);
+						tts_announcer_thread = SDL_CreateThread(tts_announcer, "tts_announcer", &struct_with_data_address);
 				  DrawBackground();
 				}
                 break;
@@ -647,7 +647,7 @@ int PlayCascade(int diflevel)
      {
 		fishies = 0; //Otherwise thread will announce old words and cause segfault
 		if(settings.tts)
-			tts_announcer_thread = SDL_CreateThread(tts_announcer, &struct_with_data_address);
+			tts_announcer_thread = SDL_CreateThread(tts_announcer, "tts_announcer", &struct_with_data_address);
 	 }
 	
     }  /* End of post-level wrap-up  */
