@@ -138,7 +138,7 @@ int handle_easter_egg(const SDL_Event* evt);
 
 const int debug_titlescreen = 1;
 
-Mix_Music* sounds[NUM_SOUNDS];
+Mix_Chunk* sounds[NUM_SOUNDS];
 SDL_Surface* images[NUM_IMAGES];
 int load_image_data();
 

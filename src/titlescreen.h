@@ -65,7 +65,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MAX_UPDATES                     180
 
 #define WAIT_MS                         2500
-#define FRAMES_PER_SEC                  50
 #define FULL_CIRCLE                     140
 
 

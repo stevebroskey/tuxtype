@@ -47,7 +47,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* Local (to laser.c) 'globals': */
 static sprite* shield = NULL;
 
-extern Mix_Music* sounds[];
+extern Mix_Chunk* sounds[];
 extern SDL_Surface* images[];
 
 //static SDL_Surface* images[NUM_IMAGES] = {NULL};

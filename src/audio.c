@@ -31,7 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "globals.h"
 #include "funcs.h"
 
-extern Mix_Music* sounds[];
+extern Mix_Chunk* sounds[];
 
 static Mix_Music* defaultMusic = NULL; // holds music for audioMusicLoad/unload
 
