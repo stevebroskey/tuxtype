@@ -92,12 +92,11 @@ int PlayLaserGame(int diff_level)
 	int i, img, done, quit, frame, lowest, lowest_y, 
 	    tux_img, old_tux_img, tux_pressing, tux_anim, tux_anim_frame,
 	    tux_same_counter, level_start_wait,
-	    num_comets_alive, paused, picked_comet, 
+	    num_comets_alive, paused, 
 	    gameover;
 	  
 
 	//TTS Word announcer variables
-	SDL_Thread *thread;
 
 	//Braille Variables
 	wchar_t pressed_letters[1000];
@@ -166,7 +165,6 @@ int PlayLaserGame(int diff_level)
   
 	frame = 0;
 	paused = 0;
-	picked_comet = -1;
 	tux_img = IMG_TUX_RELAX1;
 	tux_anim = -1;
 	tux_anim_frame = 0;
@@ -278,7 +276,7 @@ int PlayLaserGame(int diff_level)
 				/* ----- SDL_KEYUP is Only for Braille Mode -------------*/
 				if(settings.braille)
 				{
-					arrange_in_order(pressed_letters);
+					braille_reorder(pressed_letters);
 				    if (wcscmp(pressed_letters,L"") != 0)
 				    {
 					   for(i=0;i<100;i++)

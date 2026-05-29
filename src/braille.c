@@ -29,32 +29,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /* Arrange the given disordered keycombination 
  * to assigned combination (fdsjkl) */
-void arrange_in_order(wchar_t *disorder)
+/* Reorder the given chord into canonical fdsjkl (dots 1-2-3-4-5-6) order
+ * so the lookup against braille_key_value_map[].key works regardless of
+ * which physical keys the user pressed first.
+ * Source: archie2x/tuxtype a2x/sdl3_port commit a491d0c0 [B-006] */
+void braille_reorder(wchar_t* disorder)
 {
-	int iter=0,i,j,len;
-	wchar_t *order = malloc(sizeof(char)*100);
-	wchar_t *temp = malloc(sizeof(char)*100);
-	
-	wcscpy(order,L"fdsjkl");	
-	wcscpy(temp,disorder);
+    static const wchar_t dots[] = L"fdsjkl";
+    wchar_t              in[8]  = {0};
+    int                  out_i  = 0;
+    int                  in_len;
 
-	len = wcslen(disorder);
-	disorder[iter] = L'\0';
-		
-	for(i=0;i<6;i++)
-	{
-		
-		for(j=0;j<len;j++)
-		{
-			if (order[i] == temp[j])
-			{				
-				disorder[iter] = order[i];
-				iter++;
-			}
-		}
-	}
-	disorder[iter] = L'\0';
+    wcsncpy(in, disorder, 7);
+    in_len = (int)wcslen(in);
+    disorder[0] = L'\0';
+
+    for (int d = 0; d < 6; d++)
+        for (int j = 0; j < in_len; j++)
+            if (dots[d] == in[j])
+            {
+                disorder[out_i++] = dots[d];
+                break;
+            }
+    disorder[out_i] = L'\0';
 }
+
 
 
 /* Braille map loading function 

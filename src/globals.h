@@ -198,7 +198,7 @@ typedef SDL_Keysym  SDL_keysym;
  */
 
 #define LOG( str ) if (settings.debug_on) fprintf( stderr, str );
-#define DEBUGCODE if (settings.debug_on) 
+#define DEBUGCODE if (settings.debug_on)
 #define DOUT(x) if (settings.debug_on) fprintf(stderr, "%s = %d\n", #x, x);
 
 

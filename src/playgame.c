@@ -435,7 +435,7 @@ int PlayCascade(int diflevel)
 				/* ----- SDL_KEYUP is Only for Braille Mode -------------*/
 				if(settings.braille)
 				{
-					arrange_in_order(pressed_letters);
+					braille_reorder(pressed_letters);
 				    if (wcscmp(pressed_letters,L"") != 0)
 				    {
 					   for(i=0;i<100;i++)

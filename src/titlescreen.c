@@ -33,6 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #include "menu.h"
+#include "SDL_extras.h"
 
 
 /* --- Data Structure for Dirty Blitting --- */
@@ -252,7 +253,7 @@ void TitleScreen(void)
         /* FIXME not sure trans_wipe() works in Windows: */
         T4K_TransWipe(current_bkg(), RANDOM_WIPE, 5, 20);
 
-        DEBUGCODE(debug_all)
+        DEBUGCODE
         {
             /* Make sure background gets drawn (since trans_wipe() doesn't */
             /* seem to work reliably as of yet):                          */
@@ -563,7 +564,9 @@ void ShowMessageWrap( int font_size, const char* str )
         nline = T4K_LineWrap( str, strings, 35, MAX_LINES, MAX_LINEWIDTH );
 
 	/* Announcing the message */
+#ifdef HAVE_T4K_TTS
 	T4K_Tts_say(DEFAULT_VALUE,DEFAULT_VALUE,INTERRUPT,"%s",str);
+#endif  /* HAVE_T4K_TTS */
 	
     while(inprogress)
     {
@@ -1237,7 +1240,7 @@ int load_image_data()
     /* Load static images: */
     for (i = 0; i < NUM_IMAGES; i++)
     {
-		char fn[100];
+//char fn[100];  /* unused */
 		//sprintf(fn,"images/%s",image_filenames[i]);
 		
 		//fprintf(stderr,"\nCheck out : %s-%d",fn,T4K_CheckFile(fn));
